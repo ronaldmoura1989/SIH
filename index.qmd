@@ -17,7 +17,6 @@ A finalidade do AIH (Sistema SIHSUS) é a de transcrever todos os atendimentos q
 Os dados foram baixados diretamente do ftp do DataSUS (<ftp://ftp.datasus.gov.br/>) e convertidos automaticamente para dataframe utilizando os pacotes [read.dbc](https://github.com/danicat/read.dbc) e [microdatasus](https://github.com/rfsaldanha/microdatasus), respectivamente.
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
 #ETL dos dados
 library(read.dbc)
@@ -33,6 +32,9 @@ library(ggplot2)
 library(patchwork)
 library(DT)
 library(htmltools)
+
+#adicionar configuracao para nao converter os eixos dos valores para notacao cientifica
+options(scipen = 999)
 ```
 
 ## ETL (extract, transform and load)
@@ -60,13 +62,19 @@ names(sih_rd) = tolower(names(sih_rd))
 
 As análises descritivas foram feitas com base no documento técnico de [Cerqueira e colaboradores, de 2019](https://repositorio.ipea.gov.br/bitstream/11058/9409/1/Uma_analise_da_base_de_dados_do_sistema_de_informacao_hospitalar.pdf) chamado *Uma Análise da Base de Dados do Sistema de Informação Hospitalar entre 2001 e 2018: Dicionário dinâmico, disponibilidade dos dados e aspectos metodológicos para a produção de indicadores sobre violência.* Os valores serão computados por ano, quando pertinente.
 
+```{r, warning=FALSE, message=FALSE}
+#| echo: false
+
+load("sih_rd.RData")
+```
+
+### Número de Internações
+
 **Número de AIH pagas:** quantidade de autorizações de internação hospitalar (AIHs) pagas no período, tanto de novas internações como de prorrogação (longa permanência). Não estão computadas nessa quantidade, no entanto, as AIHs rejeitadas.
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
-options(scipen = 999)
-sih_rd %>%
+p1 = sih_rd %>%
   group_by(ano_cmpt) %>%
   distinct(n_aih) %>%
   summarise(AIH_pagas = n()) %>%
@@ -87,10 +95,8 @@ sih_rd %>%
 **Número de internações:** contagem das internações classificadas como internações normais, isto é, linhas filtradas pela variável com 'ident' igual a 'Principal' (AIH-1), excluindo as AIHs de longa permanência.
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
-options(scipen = 999)
-sih_rd %>%
+p2 = sih_rd %>%
   filter(ident == "Principal") %>%
   group_by(ano_cmpt) %>%
   summarise(internacoes = n()) %>%
@@ -112,10 +118,8 @@ sih_rd %>%
 também é possível verificar o percentual de internações de longa permanência por ano:
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
-options(scipen = 999)
-sih_rd %>%
+p3 = sih_rd %>%
   group_by(ano_cmpt, ident) %>%
   distinct(n_aih) %>%
   summarise(AIH_pagas = n()) %>%
@@ -140,10 +144,21 @@ sih_rd %>%
 
 ```
 
+Visualizando os gráficos temos:
+
+```{r, warning=FALSE, message=FALSE}
+#| layout-nrow: 2
+
+p1
+p2
+p3
+```
+
+### Causas das Internações
+
 **Internações por causa:** essa informação é dada pela variável 'diag_princ', que corresponde ao principal motivo para o atendimento hospitalar. Além disso, também pode ser investigado o diagnóstico secundário da internação, descrito nas variáveis 'diagsec1' a 'diagsec9', implementadas após 2015.
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
 top10_cid_ano = NULL
 for (i in unique(sih_rd$ano_cmpt)) {
@@ -172,7 +187,6 @@ tagList(datatable(
 ```
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
 top10_cid_ano_secundario = NULL
 for (i in unique(sih_rd$ano_cmpt)) {
@@ -203,16 +217,13 @@ tagList(datatable(
   options = list(iDisplayLength = 25)
   ))
 
-
-
 ```
 
 **Número de óbitos:** É a compilação de todas as internações identificadas no respectivo ano em que a variável 'morte' apresenta o valor Sim.
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
-sih_rd %>%
+p4 = sih_rd %>%
   filter(morte == "Sim") %>%
   group_by(ano_cmpt) %>%
   summarise(contagem = n()) %>%
@@ -230,15 +241,21 @@ sih_rd %>%
   scale_y_continuous(limits = c(0,40000),
                      breaks = seq(0, 40000, by = 10000)) +
   theme_minimal()
-  
+
 ```
 
-**Taxa de mortalidade (letalidade):** razão entre o número de óbitos no ano e o número de internações contabilizadas também no respectivo ano.
+plotando o gráfico temos:
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
-sih_rd %>%
+p4
+```
+
+**Taxa de letalidade:** razão entre o número de óbitos no ano e o número de internações contabilizadas também no respectivo ano.
+
+```{r, warning=FALSE, message=FALSE}
+
+p5 = sih_rd %>%
   group_by(ano_cmpt, morte) %>%
   summarise(contagem = n()) %>%
   pivot_wider(., 
@@ -267,7 +284,6 @@ sih_rd %>%
 Não foram constatadas mortes registradas pelos códigos de V01 até V99 como causa primária:
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
 sih_rd %>%
   select(ano_cmpt, morte, diag_princ) %>%
@@ -281,7 +297,6 @@ sih_rd %>%
 Já como causa secundária, os valores aparecem:
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
 cid_acidentes_secundario = NULL
 for (i in unique(sih_rd$ano_cmpt)) {
@@ -302,7 +317,7 @@ cid_acidentes_secundario = rbind(cid_acidentes_secundario,
 rm(i)
 
 
-cid_acidentes_secundario %>%
+p6 = cid_acidentes_secundario %>%
   group_by(ano_cmpt, morte) %>%
   summarise(contagem = sum(contagem)) %>%
   pivot_wider(., 
@@ -326,12 +341,11 @@ cid_acidentes_secundario %>%
   theme_minimal()
 ```
 
-**Taxa de letalidade por homicídio:** razão entre o número de óbitos em internações em que a causa principal ou secundária seja dada pelos códigos de X85 até Y09, Y35, Y36, e pela CID-10 W50, e o número de internações do respectivo ano -- dado também por essas respectivas categorias de causa principal ou secundária.
+**Taxa de letalidade por agressão:** razão entre o número de óbitos em internações em que a causa principal ou secundária seja dada pelos códigos de X85 até Y09, Y35, Y36, e pela CID-10 W50, e o número de internações do respectivo ano -- dado também por essas respectivas categorias de causa principal ou secundária.
 
-Também não foram verificados óbitos por homicídio como causa principal:
+Também não foram verificados óbitos por agressão como causa principal:
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
 sih_rd %>%
   select(ano_cmpt, morte, diag_princ) %>%
@@ -348,11 +362,10 @@ sih_rd %>%
 Agora para causa secundária:
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
-cid_homicidios_secundario = NULL
+cid_agressao_secundario = NULL
 for (i in unique(sih_rd$ano_cmpt)) {
-cid_homicidios_secundario = rbind(cid_homicidios_secundario, 
+cid_agressao_secundario = rbind(cid_agressao_secundario, 
   sih_rd %>%
     filter(ano_cmpt == i) %>%
     select(ano_cmpt, morte, diagsec1:diagsec9) %>%
@@ -369,7 +382,7 @@ cid_homicidios_secundario = rbind(cid_homicidios_secundario,
 }
 rm(i)
 
-cid_homicidios_secundario %>%
+p7 = cid_agressao_secundario %>%
   group_by(ano_cmpt, morte) %>%
   summarise(contagem = sum(contagem)) %>%
   pivot_wider(., 
@@ -387,7 +400,7 @@ cid_homicidios_secundario %>%
              alpha = 0.3,
              show.legend = FALSE) +
   labs(x = "Ano de competência",
-       y = "letalidade por homicidios (em %)") +
+       y = "letalidade por agressão (em %)") +
   scale_y_continuous(limits = c(0,12),
                      breaks = seq(0, 12, by = 1)) +
   theme_minimal()
@@ -396,12 +409,11 @@ cid_homicidios_secundario %>%
 
 Em 2019, 2020 e 2021, houve registros de homicídios, com um, quatro, e 11 casos com registros secundários, porém sem mortes.
 
-**Taxa de letalidade por homicídio com o instrumento arma de fogo:** razão entre o número de óbitos em internações em que a causa principal ou secundária seja dada pelos códigos de X93 até X95 e o número de internações do respectivo ano -- dado também por essas respectivas categorias de causa principal ou secundária.
+**Taxa de letalidade por agressão com arma de fogo:** razão entre o número de óbitos em internações em que a causa principal ou secundária seja dada pelos códigos de X93 até X95 e o número de internações do respectivo ano -- dado também por essas respectivas categorias de causa principal ou secundária.
 
 Novamente, para diagnóstico primário não temos registros:
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
 sih_rd %>%
   select(ano_cmpt, morte, diag_princ) %>%
@@ -415,11 +427,10 @@ sih_rd %>%
 Para o diagnóstico secundário temos:
 
 ```{r, warning=FALSE, message=FALSE}
-#| eval: false
 
-cid_homicidios_armas_secundario = NULL
+cid_agressao_armas_secundario = NULL
 for (i in unique(sih_rd$ano_cmpt)) {
-cid_homicidios_armas_secundario = rbind(cid_homicidios_armas_secundario, 
+cid_agressao_armas_secundario = rbind(cid_agressao_armas_secundario, 
   sih_rd %>%
     filter(ano_cmpt == i) %>%
     select(ano_cmpt, morte, diagsec1:diagsec9) %>%
@@ -434,7 +445,7 @@ cid_homicidios_armas_secundario = rbind(cid_homicidios_armas_secundario,
 }
 rm(i)
 
-cid_homicidios_armas_secundario %>%
+p8 = cid_agressao_armas_secundario %>%
   group_by(ano_cmpt, morte) %>%
   summarise(contagem = sum(contagem)) %>%
   pivot_wider(., 
@@ -458,4 +469,15 @@ cid_homicidios_armas_secundario %>%
   theme_minimal()
 ```
 
-Em 2021 e em 2022, houve um registro de homicídio por arma de fogo, como causa secundária, cada, porém sem mortes.
+Em 2021 e em 2022, houve um registro de agressão por arma de fogo, como causa secundária, cada, porém sem mortes.
+
+Plotando os gráficos temos:
+
+```{r, warning=FALSE, message=FALSE}
+#| layout-nrow: 2
+
+p5 
+p6 
+p7 
+p8
+```
