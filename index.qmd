@@ -1,0 +1,461 @@
+---
+title: "Analise dos dados do SIH-RD em Pernambuco de 2019 a 2023"
+author: "Ronald Moura"
+date: 12/12/2023
+date-format: DD/MM/YYYY
+format: html
+editor: visual
+code-fold: true
+---
+
+## **Objetivo:**
+
+A finalidade do AIH (Sistema SIHSUS) é a de transcrever todos os atendimentos que provenientes de internações hospitalares que foram FINANCIADAS PELO SUS, e após o processamento, gerarem relatórios para os gestores que lhes possibilitem fazer os pagamentos dos estabelecimentos de saúde. Além disso, o nível Federal recebe mensalmente uma base de dados de todas as internações autorizadas (aprovadas ou não para pagamento) para que possam ser repassados às Secretarias de Saúde os valores de Produção de Média e Alta complexidade além dos valores de CNRAC, FAEC e de Hospitais Universitários -- em suas variadas formas de contrato de gestão.
+
+## Carregamento dos pacotes
+
+Os dados foram baixados diretamente do ftp do DataSUS (<ftp://ftp.datasus.gov.br/>) e convertidos automaticamente para dataframe utilizando os pacotes [read.dbc](https://github.com/danicat/read.dbc) e [microdatasus](https://github.com/rfsaldanha/microdatasus), respectivamente.
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+#ETL dos dados
+library(read.dbc)
+library(microdatasus)
+library(DBI)
+library(RPostgres)
+
+#manipulacao dos dados para analise
+library(tidyverse)
+
+#visualização
+library(ggplot2)
+library(patchwork)
+library(DT)
+library(htmltools)
+```
+
+## ETL (extract, transform and load)
+
+Foram obtidos dados do SIH no estado de Pernambuco entre 2019 e 2023, para todos os meses. A data da extração dos dados foi 12 de dezembro de 2023. Vale salientar, portanto, que os dados para 2023 ainda são parciais.
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+sih_rd  = fetch_datasus(year_start = 2019,
+                         year_end = 2023,
+                         month_start = 1,
+                         month_end = 12,
+                         uf = "PE",
+                         information_system = "SIH-RD")
+
+sih_rd = process_sih(sih_rd)
+names(sih_rd) = tolower(names(sih_rd))
+
+#opcional: salvar o RData com o objeto.
+#save(sih_rd, file = "./SIH/sih_rd.RData")
+```
+
+## Analise Descritiva
+
+As análises descritivas foram feitas com base no documento técnico de [Cerqueira e colaboradores, de 2019](https://repositorio.ipea.gov.br/bitstream/11058/9409/1/Uma_analise_da_base_de_dados_do_sistema_de_informacao_hospitalar.pdf) chamado *Uma Análise da Base de Dados do Sistema de Informação Hospitalar entre 2001 e 2018: Dicionário dinâmico, disponibilidade dos dados e aspectos metodológicos para a produção de indicadores sobre violência.* Os valores serão computados por ano, quando pertinente.
+
+**Número de AIH pagas:** quantidade de autorizações de internação hospitalar (AIHs) pagas no período, tanto de novas internações como de prorrogação (longa permanência). Não estão computadas nessa quantidade, no entanto, as AIHs rejeitadas.
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+options(scipen = 999)
+sih_rd %>%
+  group_by(ano_cmpt) %>%
+  distinct(n_aih) %>%
+  summarise(AIH_pagas = n()) %>%
+  ggplot(aes(x = ano_cmpt,
+             y = AIH_pagas)) +
+  geom_col(stat = "identity",
+           fill = "cornflowerblue") +
+  geom_label(aes(label= AIH_pagas),
+             position=position_dodge(width=0.9),
+             vjust=0.4,
+             alpha = 0.3,
+             show.legend = FALSE) +
+  labs(x = "Ano de competência",
+       y = "Número de AIH pagas") +
+  theme_minimal()
+```
+
+**Número de internações:** contagem das internações classificadas como internações normais, isto é, linhas filtradas pela variável com 'ident' igual a 'Principal' (AIH-1), excluindo as AIHs de longa permanência.
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+options(scipen = 999)
+sih_rd %>%
+  filter(ident == "Principal") %>%
+  group_by(ano_cmpt) %>%
+  summarise(internacoes = n()) %>%
+  ggplot(aes(x = ano_cmpt,
+             y = internacoes)) +
+  geom_col(stat = "identity",
+           fill = "cornflowerblue") +
+  geom_label(aes(label= internacoes),
+             position=position_dodge(width=0.9),
+             vjust=0.4,
+             alpha = 0.3,
+             show.legend = FALSE) +
+  labs(x = "Ano de competência",
+       y = "Número de internações (AIH-1)") +
+  theme_minimal()
+
+```
+
+também é possível verificar o percentual de internações de longa permanência por ano:
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+options(scipen = 999)
+sih_rd %>%
+  group_by(ano_cmpt, ident) %>%
+  distinct(n_aih) %>%
+  summarise(AIH_pagas = n()) %>%
+  pivot_wider(., 
+              names_from = ident, 
+              values_from = AIH_pagas) %>%
+  mutate(pct_longa_perm = (`Longa permanência`/Principal)*100) %>%
+  mutate(pct_longa_perm = round(pct_longa_perm, 2)) %>%
+  ggplot(aes(x = ano_cmpt,
+             y = pct_longa_perm)) +
+  geom_col(stat = "identity",
+           fill = "cornflowerblue") +
+  geom_label(aes(label= paste0(pct_longa_perm, "%")),
+             position=position_dodge(width=0.9),
+             vjust=0.4,
+             alpha = 0.3,
+             show.legend = FALSE) +
+  ylim(0, 0.5) +
+  labs(x = "Ano de competência",
+       y = "Percentual de internacoes longas (em %)") +
+  theme_minimal()
+
+```
+
+**Internações por causa:** essa informação é dada pela variável 'diag_princ', que corresponde ao principal motivo para o atendimento hospitalar. Além disso, também pode ser investigado o diagnóstico secundário da internação, descrito nas variáveis 'diagsec1' a 'diagsec9', implementadas após 2015.
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+top10_cid_ano = NULL
+for (i in unique(sih_rd$ano_cmpt)) {
+top10_cid_ano = rbind(top10_cid_ano, 
+  sih_rd %>%
+    filter(ano_cmpt == i) %>%
+    group_by(ano_cmpt, diag_princ) %>%
+    summarise(contagem = n()) %>%
+    arrange(desc(contagem)) %>%
+    head(n = 10)
+  )   
+}
+rm(i)
+
+tagList(datatable(
+  top10_cid_ano %>%
+  pivot_wider(., 
+              names_from = ano_cmpt, 
+              values_from = contagem) %>%
+  rename("cod. CID-10" = diag_princ),
+  
+  autoHideNavigation = TRUE,
+  options = list(iDisplayLength = 25)
+  ))
+  
+```
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+top10_cid_ano_secundario = NULL
+for (i in unique(sih_rd$ano_cmpt)) {
+top10_cid_ano_secundario = rbind(top10_cid_ano_secundario, 
+  sih_rd %>%
+    filter(ano_cmpt == i) %>%
+    select(ano_cmpt, diagsec1:diagsec9) %>%
+    pivot_longer(cols = diagsec1:diagsec9,
+                 names_to = "diagsec",
+                 values_to = "CID10") %>%
+    drop_na() %>%
+    group_by(ano_cmpt, CID10) %>%
+    summarise(contagem = n()) %>%
+    arrange(desc(contagem)) %>%
+    head(n = 10)
+  )   
+}
+rm(i)
+
+tagList(datatable(
+  top10_cid_ano_secundario %>%
+  pivot_wider(., 
+              names_from = ano_cmpt, 
+              values_from = contagem) %>%
+  rename("CID-10 secundario" = CID10),
+  
+  autoHideNavigation = TRUE,
+  options = list(iDisplayLength = 25)
+  ))
+
+
+
+```
+
+**Número de óbitos:** É a compilação de todas as internações identificadas no respectivo ano em que a variável 'morte' apresenta o valor Sim.
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+sih_rd %>%
+  filter(morte == "Sim") %>%
+  group_by(ano_cmpt) %>%
+  summarise(contagem = n()) %>%
+  ggplot(aes(x = ano_cmpt,
+             y = contagem)) +
+  geom_col(stat = "identity",
+           fill = "cornflowerblue") +
+  geom_label(aes(label= contagem),
+             position=position_dodge(width=0.9),
+             vjust=0.4,
+             alpha = 0.3,
+             show.legend = FALSE) +
+  labs(x = "Ano de competência",
+       y = "Contagem de óbitos") +
+  scale_y_continuous(limits = c(0,40000),
+                     breaks = seq(0, 40000, by = 10000)) +
+  theme_minimal()
+  
+```
+
+**Taxa de mortalidade (letalidade):** razão entre o número de óbitos no ano e o número de internações contabilizadas também no respectivo ano.
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+sih_rd %>%
+  group_by(ano_cmpt, morte) %>%
+  summarise(contagem = n()) %>%
+  pivot_wider(., 
+              names_from = morte, 
+              values_from = contagem) %>%
+  mutate(letalidade = (Sim/(Não+Sim))*100) %>%
+  mutate(letalidade = round(letalidade, 2)) %>%
+  ggplot(aes(x = ano_cmpt,
+             y = letalidade)) +
+  geom_col(stat = "identity",
+           fill = "cornflowerblue") +
+  geom_label(aes(label= paste0(letalidade, "%")),
+             position=position_dodge(width=0.9),
+             vjust=0.4,
+             alpha = 0.3,
+             show.legend = FALSE) +
+  labs(x = "Ano de competência",
+       y = "Taxa de letalidade (em %)") +
+  scale_y_continuous(limits = c(0,7),
+                     breaks = seq(0, 7, by = 1)) +
+  theme_minimal()
+```
+
+**Taxa de letalidade por acidentes de transporte:** razão entre o número de óbitos em internações em que a causa principal ou secundária seja dada pelos códigos de V01 até V99, correspondentes aos códigos de acidentes de transporte, e o número de internações do respectivo ano -- dado também por essas respectivas categorias de causa principal ou secundária.
+
+Não foram constatadas mortes registradas pelos códigos de V01 até V99 como causa primária:
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+sih_rd %>%
+  select(ano_cmpt, morte, diag_princ) %>%
+  filter(grepl("^V[0-9][1-9]$|^V[1-9][0-9]$", diag_princ) == TRUE) %>%
+  drop_na() %>%
+  group_by(ano_cmpt, morte) %>%
+  summarise(contagem = n()) %>%
+  arrange(desc(contagem))
+```
+
+Já como causa secundária, os valores aparecem:
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+cid_acidentes_secundario = NULL
+for (i in unique(sih_rd$ano_cmpt)) {
+cid_acidentes_secundario = rbind(cid_acidentes_secundario, 
+  sih_rd %>%
+    filter(ano_cmpt == i) %>%
+    select(ano_cmpt, morte, diagsec1:diagsec9) %>%
+    pivot_longer(cols = diagsec1:diagsec9,
+                 names_to = "diagsec",
+                 values_to = "CID10") %>%
+    drop_na() %>%
+    group_by(ano_cmpt, morte, CID10) %>%
+    summarise(contagem = n()) %>%
+    arrange(desc(contagem)) %>%
+    filter(grepl("^V[0-9][1-9]$|^V[1-9][0-9]$", CID10) == TRUE)
+  )   
+}
+rm(i)
+
+
+cid_acidentes_secundario %>%
+  group_by(ano_cmpt, morte) %>%
+  summarise(contagem = sum(contagem)) %>%
+  pivot_wider(., 
+              names_from = morte, 
+              values_from = contagem) %>%
+  mutate(letalidade = (Sim/(Não+Sim))*100) %>%
+  mutate(letalidade = round(letalidade, 2)) %>%
+  ggplot(aes(x = ano_cmpt,
+             y = letalidade)) +
+  geom_col(stat = "identity",
+           fill = "cornflowerblue") +
+  geom_label(aes(label= paste0(letalidade, "%")),
+             position=position_dodge(width=0.9),
+             vjust=0.4,
+             alpha = 0.3,
+             show.legend = FALSE) +
+  labs(x = "Ano de competência",
+       y = "letalidade por CID-10 V01 até V99 (em %)") +
+  scale_y_continuous(limits = c(0,7),
+                     breaks = seq(0, 7, by = 1)) +
+  theme_minimal()
+```
+
+**Taxa de letalidade por homicídio:** razão entre o número de óbitos em internações em que a causa principal ou secundária seja dada pelos códigos de X85 até Y09, Y35, Y36, e pela CID-10 W50, e o número de internações do respectivo ano -- dado também por essas respectivas categorias de causa principal ou secundária.
+
+Também não foram verificados óbitos por homicídio como causa principal:
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+sih_rd %>%
+  select(ano_cmpt, morte, diag_princ) %>%
+  filter(grepl(
+    "^X(8[5-9]|[9][0-9])$|^Y(0[1-9]|[1-9])$|^Y(3[5-6])$|^W(5[0])$", 
+    diag_princ) == TRUE) %>%
+  drop_na() %>%
+  group_by(ano_cmpt, morte) %>%
+  summarise(contagem = n()) %>%
+  arrange(desc(contagem))
+
+```
+
+Agora para causa secundária:
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+cid_homicidios_secundario = NULL
+for (i in unique(sih_rd$ano_cmpt)) {
+cid_homicidios_secundario = rbind(cid_homicidios_secundario, 
+  sih_rd %>%
+    filter(ano_cmpt == i) %>%
+    select(ano_cmpt, morte, diagsec1:diagsec9) %>%
+    pivot_longer(cols = diagsec1:diagsec9,
+                 names_to = "diagsec",
+                 values_to = "CID10") %>%
+    drop_na() %>%
+    group_by(ano_cmpt, morte, CID10) %>%
+    summarise(contagem = n()) %>%
+    arrange(desc(contagem)) %>%
+    filter(grepl(
+      "^X(8[5-9]|[9][0-9])$|^Y(0[1-9]|[1-9])$|^Y(3[5-6])$|^W(5[0])$", CID10) == T)
+  )   
+}
+rm(i)
+
+cid_homicidios_secundario %>%
+  group_by(ano_cmpt, morte) %>%
+  summarise(contagem = sum(contagem)) %>%
+  pivot_wider(., 
+              names_from = morte, 
+              values_from = contagem) %>%
+  mutate(letalidade = (Sim/(Não+Sim))*100) %>%
+  mutate(letalidade = round(letalidade, 2)) %>%
+  ggplot(aes(x = ano_cmpt,
+             y = letalidade)) +
+  geom_col(stat = "identity",
+           fill = "cornflowerblue") +
+  geom_label(aes(label= paste0(letalidade, "%")),
+             position=position_dodge(width=0.9),
+             vjust=0.4,
+             alpha = 0.3,
+             show.legend = FALSE) +
+  labs(x = "Ano de competência",
+       y = "letalidade por homicidios (em %)") +
+  scale_y_continuous(limits = c(0,12),
+                     breaks = seq(0, 12, by = 1)) +
+  theme_minimal()
+
+```
+
+Em 2019, 2020 e 2021, houve registros de homicídios, com um, quatro, e 11 casos com registros secundários, porém sem mortes.
+
+**Taxa de letalidade por homicídio com o instrumento arma de fogo:** razão entre o número de óbitos em internações em que a causa principal ou secundária seja dada pelos códigos de X93 até X95 e o número de internações do respectivo ano -- dado também por essas respectivas categorias de causa principal ou secundária.
+
+Novamente, para diagnóstico primário não temos registros:
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+sih_rd %>%
+  select(ano_cmpt, morte, diag_princ) %>%
+  filter(grepl("^X9[3-5]$", diag_princ) == TRUE) %>%
+  drop_na() %>%
+  group_by(ano_cmpt, morte) %>%
+  summarise(contagem = n()) %>%
+  arrange(desc(contagem))
+```
+
+Para o diagnóstico secundário temos:
+
+```{r, warning=FALSE, message=FALSE}
+#| eval: false
+
+cid_homicidios_armas_secundario = NULL
+for (i in unique(sih_rd$ano_cmpt)) {
+cid_homicidios_armas_secundario = rbind(cid_homicidios_armas_secundario, 
+  sih_rd %>%
+    filter(ano_cmpt == i) %>%
+    select(ano_cmpt, morte, diagsec1:diagsec9) %>%
+    pivot_longer(cols = diagsec1:diagsec9,
+                 names_to = "diagsec",
+                 values_to = "CID10") %>%
+    drop_na() %>%
+    group_by(ano_cmpt, morte, CID10) %>%
+    summarise(contagem = n()) %>%
+    arrange(desc(contagem)) %>%
+    filter(grepl("^X9[3-5]$", CID10) == TRUE))   
+}
+rm(i)
+
+cid_homicidios_armas_secundario %>%
+  group_by(ano_cmpt, morte) %>%
+  summarise(contagem = sum(contagem)) %>%
+  pivot_wider(., 
+              names_from = morte, 
+              values_from = contagem) %>%
+  mutate(letalidade = (Sim/(Não+Sim))*100) %>%
+  mutate(letalidade = round(letalidade, 2)) %>%
+  ggplot(aes(x = ano_cmpt,
+             y = letalidade)) +
+  geom_col(stat = "identity",
+           fill = "cornflowerblue") +
+  geom_label(aes(label= paste0(letalidade, "%")),
+             position=position_dodge(width=0.9),
+             vjust=0.4,
+             alpha = 0.3,
+             show.legend = FALSE) +
+  labs(x = "Ano de competência",
+       y = "letalidade por armas de fogo (em %)") +
+  scale_y_continuous(limits = c(0,15),
+                     breaks = seq(0, 15, by = 5)) +
+  theme_minimal()
+```
+
+Em 2021 e em 2022, houve um registro de homicídio por arma de fogo, como causa secundária, cada, porém sem mortes.
