@@ -6,7 +6,7 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Ronald Moura">
+<meta name="author" content="BioHub Solutions">
 <meta name="dcterms.date" content="2023-12-12">
 
 <title>SIH - Analise dos dados do SIH-RD em Pernambuco de 2019 a 2023</title>
@@ -132,8 +132,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Home</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="./about.html" rel="" target="">
- <span class="menu-text">About</span></a>
+    <a class="nav-link" href="./gravidez.html" rel="" target="">
+ <span class="menu-text">Analise dos dados do SIH-RD em Pernambuco de 2019 a 2023</span></a>
   </li>  
 </ul>
             <div class="quarto-navbar-tools ms-auto">
@@ -177,7 +177,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Author</div>
     <div class="quarto-title-meta-contents">
-             <p>Ronald Moura </p>
+             <p>BioHub Solutions </p>
           </div>
   </div>
     
@@ -200,7 +200,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="carregamento-dos-pacotes" class="level2">
 <h2 class="anchored" data-anchor-id="carregamento-dos-pacotes">Carregamento dos pacotes</h2>
-<p>Os dados foram baixados diretamente do ftp do DataSUS (<a href="ftp://ftp.datasus.gov.br/" class="uri">ftp://ftp.datasus.gov.br/</a>) e convertidos automaticamente para dataframe utilizando os pacotes <a href="https://github.com/danicat/read.dbc">read.dbc</a> e <a href="https://github.com/rfsaldanha/microdatasus">microdatasus</a>, respectivamente.</p>
+<p>Os dados foram baixados diretamente do ftp do DataSUS (<a href="ftp://ftp.datasus.gov.br/" class="uri">ftp://ftp.datasus.gov.br/</a>) e convertidos automaticamente para dataframe utilizando os pacotes <a href="https://github.com/danicat/read.dbc">read.dbc</a> e <a href="https://github.com/rfsaldanha/microdatasus">microdatasus</a>, respectivamente. As descrições do CID-10 foram obtidas através do pacote <a href="https://rdrr.io/github/msrodrigues/cid10/">cid10</a>.</p>
 <div class="cell">
 <details>
 <summary>Code</summary>
@@ -212,36 +212,57 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co">#manipulacao dos dados para analise</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">#visualização</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DT)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(htmltools)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">#adicionar configuracao para nao converter os eixos dos valores para notacao cientifica</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen =</span> <span class="dv">999</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cid10)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">#visualização</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DT)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(htmltools)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">#adicionar configuracao para nao converter os eixos dos valores para notacao cientifica</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen =</span> <span class="dv">999</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
 <section id="etl-extract-transform-and-load" class="level2">
 <h2 class="anchored" data-anchor-id="etl-extract-transform-and-load">ETL (extract, transform and load)</h2>
-<p>Foram obtidos dados do SIH no estado de Pernambuco entre 2019 e 2023, para todos os meses. A data da extração dos dados foi 12 de dezembro de 2023. Vale salientar, portanto, que os dados para 2023 ainda são parciais.</p>
+<p>Foram obtidos dados do SIH no estado de Pernambuco entre 2019 e 2023, para todos os meses. A data da extração dos dados foi 12 de dezembro de 2023. Vale salientar, portanto, que os dados para 2023 ainda são parciais. O último registro de 2023 foi no mês de outubro.</p>
 <div class="cell">
 <details>
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>sih_rd  <span class="ot">=</span> <span class="fu">fetch_datasus</span>(<span class="at">year_start =</span> <span class="dv">2019</span>,</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">year_end =</span> <span class="dv">2023</span>,</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">month_start =</span> <span class="dv">1</span>,</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">month_end =</span> <span class="dv">12</span>,</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">uf =</span> <span class="st">"PE"</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                         <span class="at">information_system =</span> <span class="st">"SIH-RD"</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>sih_rd <span class="ot">=</span> <span class="fu">process_sih</span>(sih_rd)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(sih_rd) <span class="ot">=</span> <span class="fu">tolower</span>(<span class="fu">names</span>(sih_rd))</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">#opcional: salvar o RData com o objeto.</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#save(sih_rd, file = "./SIH/sih_rd.RData")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#extrair base de dados do SIH-RD</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>sih_rd  <span class="ot">=</span> <span class="fu">fetch_datasus</span>(<span class="at">year_start =</span> <span class="dv">2019</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">year_end =</span> <span class="dv">2023</span>,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">month_start =</span> <span class="dv">1</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">month_end =</span> <span class="dv">12</span>,</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                         <span class="at">uf =</span> <span class="st">"PE"</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>                         <span class="at">information_system =</span> <span class="st">"SIH-RD"</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>sih_rd <span class="ot">=</span> <span class="fu">process_sih</span>(sih_rd)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(sih_rd) <span class="ot">=</span> <span class="fu">tolower</span>(<span class="fu">names</span>(sih_rd))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#extrair base de dados do CNES</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>cnes  <span class="ot">=</span> <span class="fu">fetch_datasus</span>(<span class="at">year_start =</span> <span class="dv">2019</span>,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>                      <span class="at">year_end =</span> <span class="dv">2023</span>,</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>                      <span class="at">month_start =</span> <span class="dv">1</span>,</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>                      <span class="at">month_end =</span> <span class="dv">12</span>,</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>                      <span class="at">uf =</span> <span class="st">"PE"</span>,</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>                      <span class="at">information_system =</span> <span class="st">"CNES-ST"</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>cnes <span class="ot">=</span> cnes <span class="sc">%&gt;%</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(CNES, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>cnes <span class="ot">=</span> <span class="fu">process_cnes</span>(cnes, <span class="at">information_system =</span> <span class="st">"CNES-ST"</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>cnes_reduzido <span class="ot">=</span> cnes <span class="sc">%&gt;%</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(CNES, FANTASIA, COD_CEP, CNPJ_MAN, munResNome<span class="sc">:</span>munResAlt) <span class="sc">%&gt;%</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">cnes =</span> CNES)</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(<span class="at">list =</span> <span class="fu">c</span>(<span class="st">"cnes"</span>, <span class="st">"cnes_reduzido"</span>), <span class="at">file =</span> <span class="st">"nao_upar/cnes.RData"</span>)</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co">#opcional: salvar o RData com o objeto.</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co">#save(sih_rd, file = "./SIH/sih_rd.RData")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 </section>
@@ -332,13 +353,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </details>
 <div class="cell quarto-layout-panel">
 <div class="quarto-layout-row quarto-layout-valign-top">
-<div class="cell-output-display quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
 <p><img src="index_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
 </div>
-<div class="cell-output-display quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
 <p><img src="index_files/figure-html/unnamed-chunk-7-2.png" class="img-fluid" width="672"></p>
 </div>
-<div class="cell-output-display quarto-layout-cell" style="flex-basis: 33.3%;justify-content: center;">
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="cell-output-display quarto-layout-cell" style="flex-basis: 50.0%;justify-content: center;">
 <p><img src="index_files/figure-html/unnamed-chunk-7-3.png" class="img-fluid" width="672"></p>
 </div>
 </div>
@@ -347,7 +370,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="causas-das-internações" class="level3">
 <h3 class="anchored" data-anchor-id="causas-das-internações">Causas das Internações</h3>
-<p><strong>Internações por causa:</strong> essa informação é dada pela variável ‘diag_princ’, que corresponde ao principal motivo para o atendimento hospitalar. Além disso, também pode ser investigado o diagnóstico secundário da internação, descrito nas variáveis ‘diagsec1’ a ‘diagsec9’, implementadas após 2015.</p>
+<p><strong>Internações por causa:</strong> essa informação é dada pela variável ‘diag_princ’, que corresponde ao principal motivo para o atendimento hospitalar. Além disso, também pode ser investigado o diagnóstico secundário da internação, descrito nas variáveis ‘diagsec1’ a ‘diagsec9’, implementadas após 2015. Aqui vemos o top 10 por ano:</p>
 <div class="cell">
 <details>
 <summary>Code</summary>
@@ -369,16 +392,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(., </span>
 <span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>              <span class="at">names_from =</span> ano_cmpt, </span>
 <span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>              <span class="at">values_from =</span> contagem) <span class="sc">%&gt;%</span></span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="st">"cod. CID-10"</span> <span class="ot">=</span> diag_princ),</span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="at">autoHideNavigation =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">options =</span> <span class="fu">list</span>(<span class="at">iDisplayLength =</span> <span class="dv">25</span>)</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  ))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="st">"cid"</span> <span class="ot">=</span> diag_princ) <span class="sc">%&gt;%</span></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(., cid10<span class="sc">::</span>cid_subcat[<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">5</span>)]) <span class="sc">%&gt;%</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(descricao, <span class="at">.after =</span> cid),</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">autoHideNavigation =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">options =</span> <span class="fu">list</span>(<span class="at">iDisplayLength =</span> <span class="dv">25</span>)</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>  ))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-58a4e1a87ab36c0786d0" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-58a4e1a87ab36c0786d0">{"x":{"filter":"none","vertical":false,"autoHideNavigation":true,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17"],["O800","O809","I64","O420","J189","N390","L989","J188","O801","K409","B342","O821","O034","P599","Z302","I500","A419"],[38520,12765,11764,8506,8023,7833,7194,6633,6253,5608,null,null,null,null,null,null,null],[33413,12375,8550,7526,null,6335,5306,null,4968,null,30320,5025,4885,null,null,null,null],[32289,12676,8945,6559,null,7106,5930,null,4968,null,58985,null,5228,5053,null,null,null],[30761,10586,12161,5717,7988,8471,8755,null,null,null,12291,null,null,null,6871,5963,null],[24241,9001,8940,5198,6898,7348,10034,null,null,null,null,null,null,5155,7216,null,4322]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>cod. CID-10<\/th>\n      <th>2019<\/th>\n      <th>2020<\/th>\n      <th>2021<\/th>\n      <th>2022<\/th>\n      <th>2023<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"iDisplayLength":25,"columnDefs":[{"className":"dt-right","targets":[2,3,4,5,6]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-c3f85841b144392a75e8" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-c3f85841b144392a75e8">{"x":{"filter":"none","vertical":false,"autoHideNavigation":true,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17"],["O800","O809","I64","O420","J189","N390","L989","J188","O801","K409","B342","O821","O034","P599","Z302","I500","A419"],["Parto espontâneo cefálico","Parto único espontâneo, não especificado","Acidente vascular cerebral, não especificado como hemorrágico ou isquêmico","Ruptura prematura de membranas, com início do trabalho de parto dentro de 24 horas","Pneumonia não especificada","Infecção do trato urinário de localização não especificada","Afecções da pele e do tecido subcutâneo, não especificados","Outras pneumonias devidas a microorganismos não especificados","Parto espontâneo pélvico","Hérnia inguinal unilateral ou não especificada, sem obstrução ou gangrena","Infecção por coronavírus de localização não especificada","Parto por cesariana de emergência","Aborto espontâneo - incompleto, sem complicações","Icterícia neonatal não especificada","Esterilização","Insuficiência cardíaca congestiva","Septicemia não especificada"],[38520,12765,11764,8506,8023,7833,7194,6633,6253,5608,null,null,null,null,null,null,null],[33413,12375,8550,7526,null,6335,5306,null,4968,null,30320,5025,4885,null,null,null,null],[32289,12676,8945,6559,null,7106,5930,null,4968,null,58985,null,5228,5053,null,null,null],[30761,10586,12161,5717,7988,8471,8755,null,null,null,12291,null,null,null,6871,5963,null],[24241,9001,8940,5198,6898,7348,10034,null,null,null,null,null,null,5155,7216,null,4322]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>cid<\/th>\n      <th>descricao<\/th>\n      <th>2019<\/th>\n      <th>2020<\/th>\n      <th>2021<\/th>\n      <th>2022<\/th>\n      <th>2023<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"iDisplayLength":25,"columnDefs":[{"className":"dt-right","targets":[3,4,5,6,7]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 <div class="cell">
@@ -407,16 +432,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(., </span>
 <span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>              <span class="at">names_from =</span> ano_cmpt, </span>
 <span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>              <span class="at">values_from =</span> contagem) <span class="sc">%&gt;%</span></span>
-<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="st">"CID-10 secundario"</span> <span class="ot">=</span> CID10),</span>
-<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>  <span class="at">autoHideNavigation =</span> <span class="cn">TRUE</span>,</span>
-<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>  <span class="at">options =</span> <span class="fu">list</span>(<span class="at">iDisplayLength =</span> <span class="dv">25</span>)</span>
-<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>  ))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="st">"cid"</span> <span class="ot">=</span> CID10) <span class="sc">%&gt;%</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(., cid10<span class="sc">::</span>cid_subcat[<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">5</span>)]) <span class="sc">%&gt;%</span></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(descricao, <span class="at">.after =</span> cid),</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>  <span class="at">autoHideNavigation =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">options =</span> <span class="fu">list</span>(<span class="at">iDisplayLength =</span> <span class="dv">25</span>)</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>  ))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 
-<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-8d121e0874350964ff83" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-8d121e0874350964ff83">{"x":{"filter":"none","vertical":false,"autoHideNavigation":true,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13"],["X588","I10","W189","X590","R104","V299","R100","R11","R060","R102","R05","W180","X589"],[23612,8040,5032,3958,3800,3706,3440,3405,3106,2588,null,null,null],[21943,9504,3937,4306,4037,3319,3064,3597,3648,2737,null,null,null],[21191,12819,3584,4436,5953,3599,4483,4524,6256,null,3292,null,null],[23527,15940,4194,3749,5951,4137,5604,4792,5532,null,null,3325,null],[18301,13049,3380,3386,7497,3522,3684,null,3887,null,null,3963,3548]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>CID-10 secundario<\/th>\n      <th>2019<\/th>\n      <th>2020<\/th>\n      <th>2021<\/th>\n      <th>2022<\/th>\n      <th>2023<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"iDisplayLength":25,"columnDefs":[{"className":"dt-right","targets":[2,3,4,5,6]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-983d88cde2243d750b0a" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-983d88cde2243d750b0a">{"x":{"filter":"none","vertical":false,"autoHideNavigation":true,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13"],["X588","I10","W189","X590","R104","V299","R100","R11","R060","R102","R05","W180","X589"],["Exposição a outros fatores especificados - outros locais especificados","Hipertensão essencial (primária)","Outras quedas no mesmo nível - local não especificado","Exposição a fator não especificado causando fratura","Outras dores abdominais e as não especificadas","Motociclista [qualquer] traumatizado em um acidente de trânsito não especificado","Abdome agudo","Náusea e vômitos","Dispnéia","Dor pélvica e perineal","Tosse","Outras quedas no mesmo nível - residência","Exposição a outros fatores especificados - local não especificado"],[23612,8040,5032,3958,3800,3706,3440,3405,3106,2588,null,null,null],[21943,9504,3937,4306,4037,3319,3064,3597,3648,2737,null,null,null],[21191,12819,3584,4436,5953,3599,4483,4524,6256,null,3292,null,null],[23527,15940,4194,3749,5951,4137,5604,4792,5532,null,null,3325,null],[18301,13049,3380,3386,7497,3522,3684,null,3887,null,null,3963,3548]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>cid<\/th>\n      <th>descricao<\/th>\n      <th>2019<\/th>\n      <th>2020<\/th>\n      <th>2021<\/th>\n      <th>2022<\/th>\n      <th>2023<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"iDisplayLength":25,"columnDefs":[{"className":"dt-right","targets":[3,4,5,6,7]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 <p><strong>Número de óbitos:</strong> É a compilação de todas as internações identificadas no respectivo ano em que a variável ‘morte’ apresenta o valor Sim.</p>
@@ -709,6 +736,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
+<p>Na próxima etapa, faremos uma análise mais detalhada de alguns grupos de casos, com base nos capítulos do CID-10.</p>
 
 
 </section>

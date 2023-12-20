@@ -1,6 +1,6 @@
 ---
 title: "Analise dos dados do SIH-RD em Pernambuco de 2019 a 2023"
-author: "Ronald Moura"
+author: "BioHub Solutions"
 date: 12/12/2023
 date-format: DD/MM/YYYY
 format: html
@@ -14,7 +14,7 @@ A finalidade do AIH (Sistema SIHSUS) é a de transcrever todos os atendimentos q
 
 ## Carregamento dos pacotes
 
-Os dados foram baixados diretamente do ftp do DataSUS (<ftp://ftp.datasus.gov.br/>) e convertidos automaticamente para dataframe utilizando os pacotes [read.dbc](https://github.com/danicat/read.dbc) e [microdatasus](https://github.com/rfsaldanha/microdatasus), respectivamente.
+Os dados foram baixados diretamente do ftp do DataSUS (<ftp://ftp.datasus.gov.br/>) e convertidos automaticamente para dataframe utilizando os pacotes [read.dbc](https://github.com/danicat/read.dbc) e [microdatasus](https://github.com/rfsaldanha/microdatasus), respectivamente. As descrições do CID-10 foram obtidas através do pacote [cid10](https://rdrr.io/github/msrodrigues/cid10/).
 
 ```{r, warning=FALSE, message=FALSE}
 
@@ -26,6 +26,7 @@ library(RPostgres)
 
 #manipulacao dos dados para analise
 library(tidyverse)
+library(cid10)
 
 #visualização
 library(ggplot2)
@@ -39,11 +40,12 @@ options(scipen = 999)
 
 ## ETL (extract, transform and load)
 
-Foram obtidos dados do SIH no estado de Pernambuco entre 2019 e 2023, para todos os meses. A data da extração dos dados foi 12 de dezembro de 2023. Vale salientar, portanto, que os dados para 2023 ainda são parciais.
+Foram obtidos dados do SIH no estado de Pernambuco entre 2019 e 2023, para todos os meses. A data da extração dos dados foi 12 de dezembro de 2023. Vale salientar, portanto, que os dados para 2023 ainda são parciais. O último registro de 2023 foi no mês de outubro.
 
 ```{r, warning=FALSE, message=FALSE}
 #| eval: false
 
+#extrair base de dados do SIH-RD
 sih_rd  = fetch_datasus(year_start = 2019,
                          year_end = 2023,
                          month_start = 1,
@@ -54,19 +56,39 @@ sih_rd  = fetch_datasus(year_start = 2019,
 sih_rd = process_sih(sih_rd)
 names(sih_rd) = tolower(names(sih_rd))
 
+#extrair base de dados do CNES
+cnes  = fetch_datasus(year_start = 2019,
+                      year_end = 2023,
+                      month_start = 1,
+                      month_end = 12,
+                      uf = "PE",
+                      information_system = "CNES-ST")
+
+cnes = cnes %>%
+  distinct(CNES, .keep_all = TRUE)
+
+cnes = process_cnes(cnes, information_system = "CNES-ST")
+
+cnes_reduzido = cnes %>%
+  select(CNES, FANTASIA, COD_CEP, CNPJ_MAN, munResNome:munResAlt) %>%
+  rename(cnes = CNES)
+
+save(list = c("cnes", "cnes_reduzido"), file = "nao_upar/cnes.RData")
+
 #opcional: salvar o RData com o objeto.
 #save(sih_rd, file = "./SIH/sih_rd.RData")
+```
+
+```{r, warning=FALSE, message=FALSE}
+#| echo: false
+
+load("nao_upar/sih_rd.RData")
+load("nao_upar/cnes.RData")
 ```
 
 ## Analise Descritiva
 
 As análises descritivas foram feitas com base no documento técnico de [Cerqueira e colaboradores, de 2019](https://repositorio.ipea.gov.br/bitstream/11058/9409/1/Uma_analise_da_base_de_dados_do_sistema_de_informacao_hospitalar.pdf) chamado *Uma Análise da Base de Dados do Sistema de Informação Hospitalar entre 2001 e 2018: Dicionário dinâmico, disponibilidade dos dados e aspectos metodológicos para a produção de indicadores sobre violência.* Os valores serão computados por ano, quando pertinente.
-
-```{r, warning=FALSE, message=FALSE}
-#| echo: false
-
-load("sih_rd.RData")
-```
 
 ### Número de Internações
 
@@ -156,7 +178,7 @@ p3
 
 ### Causas das Internações
 
-**Internações por causa:** essa informação é dada pela variável 'diag_princ', que corresponde ao principal motivo para o atendimento hospitalar. Além disso, também pode ser investigado o diagnóstico secundário da internação, descrito nas variáveis 'diagsec1' a 'diagsec9', implementadas após 2015.
+**Internações por causa:** essa informação é dada pela variável 'diag_princ', que corresponde ao principal motivo para o atendimento hospitalar. Além disso, também pode ser investigado o diagnóstico secundário da internação, descrito nas variáveis 'diagsec1' a 'diagsec9', implementadas após 2015. Aqui vemos o top 10 por ano:
 
 ```{r, warning=FALSE, message=FALSE}
 
@@ -178,7 +200,9 @@ tagList(datatable(
   pivot_wider(., 
               names_from = ano_cmpt, 
               values_from = contagem) %>%
-  rename("cod. CID-10" = diag_princ),
+  rename("cid" = diag_princ) %>%
+  left_join(., cid10::cid_subcat[c(1,5)]) %>%
+  relocate(descricao, .after = cid),
   
   autoHideNavigation = TRUE,
   options = list(iDisplayLength = 25)
@@ -211,7 +235,9 @@ tagList(datatable(
   pivot_wider(., 
               names_from = ano_cmpt, 
               values_from = contagem) %>%
-  rename("CID-10 secundario" = CID10),
+  rename("cid" = CID10) %>%
+  left_join(., cid10::cid_subcat[c(1,5)]) %>%
+  relocate(descricao, .after = cid),
   
   autoHideNavigation = TRUE,
   options = list(iDisplayLength = 25)
@@ -481,3 +507,5 @@ p6
 p7 
 p8
 ```
+
+Na próxima etapa, faremos uma análise mais detalhada de alguns grupos de casos, com base nos capítulos do CID-10.

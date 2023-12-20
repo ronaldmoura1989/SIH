@@ -1,0 +1,163 @@
+---
+title: "Gravidez, parto e puerpério"
+author: "BioHub Solutions"
+date: 12/12/2023
+date-format: DD/MM/YYYY
+format: html
+editor: visual
+code-fold: true
+---
+
+## Segmentação dos dados
+
+```{r, warning=FALSE, message=FALSE}
+#| echo: false
+
+#manipulacao dos dados para analise
+library(tidyverse)
+library(cid10)
+
+#visualização
+library(ggplot2)
+library(patchwork)
+library(DT)
+library(htmltools)
+
+#load RData
+load("nao_upar/sih_rd.RData")
+load("nao_upar/cnes.RData")
+
+```
+
+Essa segmentação foi feita com base no [capítulo XV](https://cid.ninsaude.com/capitulo/xv/) do CID-10, que está relacionado com gravidez, parto e puerpério:
+
+```{r, warning=FALSE, message=FALSE}
+#| echo: false
+
+Grupo = c("Ooo-Oo8", "O10-O16", "O20-O29", 
+          "O30-O48", "O60-O75", "O80-O84", 
+          "O85-O92", "O94-O99")
+
+Descricao = c("Gravidez que termina em aborto.", 
+"Edema, proteinúria e transtornos hipertensivos na gravidez, no parto e no puerpério.", 
+"Outros transtornos maternos relacionados predominantemente com a gravidez.", "Assistência prestada à mãe por motivos ligados ao feto e à cavidade amniótica e por possíveis problemas relativos ao parto.", 
+"Complicações do trabalho de parto e do parto.", 
+"Parto.", 
+"Complicações relacionadas predominantemente com o puerpério.", 
+"Outras afecções obstétricas não classificadas em outra parte.")
+
+capitulo_xv = data.frame(Grupo, Descricao)
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+gravidez = sih_rd %>%
+  mutate(cid_gravida = case_when(grepl("^O0[0:8]", diag_princ) == TRUE ~ "Ooo-Oo8",
+                                 grepl("^O1[0:6]", diag_princ) == TRUE ~ "O10-O16",
+                                 grepl("^O2[0:9]", diag_princ) == TRUE ~ "O20-O29",
+                                 grepl("^O3[0:9]|^O4[0:8]", diag_princ) == TRUE ~ "O30-O48",
+                                 grepl("^O6[0:9]|^O7[0:5]", diag_princ) == TRUE ~ "O60-O75",
+                                 grepl("^O8[0:4]", diag_princ) == TRUE ~ "O80-O84",
+                                 grepl("^O8[5:9]|^O9[0:2]", diag_princ) == TRUE ~ "O85-O92",
+                                 grepl("^O9[4:9]", diag_princ) == TRUE ~ "O94-O99")
+  ) %>%
+  mutate(cid_gravida = fct_relevel(cid_gravida, c("Ooo-Oo8", "O10-O16", 
+                                                  "O20-O29", "O30-O48", 
+                                                  "O60-O75", "O80-O84",
+                                                  "O85-O92", "O94-O99"))) %>%
+  filter(!is.na(cid_gravida) == TRUE) %>%
+  select(n_aih, ano_cmpt, sexo, nasc, dt_inter, cep, 
+         cnes, marca_uti, morte, cobranca, diag_princ,
+         diagsec1:diagsec9, cid_gravida) %>%
+  rename("cid" = diag_princ) %>%
+  left_join(., cid10::cid_subcat[c(1,5)]) %>%
+  relocate(descricao, .after = cid) %>%
+  mutate(descricao = ifelse(cid == "O80", "Parto único espontâneo", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O84", "Parto múltiplo", descricao)) %>%
+  left_join(., cnes_reduzido[,c(1:3)]) %>%
+  relocate(FANTASIA, .after = cnes) %>%
+  relocate(COD_CEP,  .after = FANTASIA)
+
+```
+
+A tabela abaixo sumariza a quantidade de atendimentos tendo como causa primária uma das manifestações do capitulo XV:
+
+```{r, warning=FALSE, message=FALSE}
+
+capitulo_xv = gravidez %>%
+  group_by(ano_cmpt, cid_gravida) %>%
+  summarise(contagem = n()) %>%
+  pivot_wider(., 
+              names_from = ano_cmpt, 
+              values_from = contagem) %>%
+  rename(Grupo = cid_gravida) %>%
+  left_join(capitulo_xv, ., by = "Grupo")
+
+tagList(datatable(capitulo_xv,
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+```
+
+Como esperado, a maior parte dos atendimentos foram para realização de parto. dentro dessa categoria temos registros para as seguintes causas:
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez %>% 
+                    filter(cid_gravida == "O80-O84") %>%
+                    group_by(cid, descricao, morte) %>%
+                    summarise(contagem = n()) %>%
+                    pivot_wider(., 
+                                names_from = morte,
+                                values_from = contagem) %>%
+                    rename(viva = Não) %>%
+                    rename(obito = Sim) %>%
+                    mutate(obito = ifelse(is.na(obito) == TRUE, 0, obito)) %>%
+                    mutate(total = viva+obito) %>%
+                    arrange(desc(total)),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+
+```
+
+Dos 252.312 partos realizados nos ultimos cinco anos, 37 mulheres faleceram (0,014%). A idade média dessas mulheres é de 25,35 anos (desvio de 7,28 anos); cinco delas tinham 18 anos ou menos, quando iniciaram o atendimento, enquanto que outras cinco tinham 35 anos ou mais; três precisaram usar UTI.
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez %>%
+  filter(cid_gravida == "O80-O84") %>%
+  filter(morte == "Sim") %>%
+  mutate(nasc = as.Date(nasc, tryFormats = c("%Y-%m-%d"))) %>%
+  mutate(dt_inter = as.Date(dt_inter, tryFormats = c("%Y-%m-%d"))) %>%
+  mutate(idade_diag = dt_inter - nasc) %>%
+  mutate(idade_diag = as.integer(idade_diag) %/% 365.25) %>%
+  relocate(idade_diag, .after = dt_inter) %>%
+  select(nasc:idade_diag, marca_uti, cid, descricao),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+```
+
+Podemos representar graficamente as outras causas da seguinte forma:
+
+```{r, warning=FALSE, message=FALSE}
+
+capitulo_xv %>%
+  pivot_longer(cols = starts_with("20"), 
+               names_to = "ano", 
+               values_to = "contagem") %>%
+  filter(!Grupo == "O80-O84") %>%
+  ggplot(aes(x = ano,
+             y = contagem, 
+             fill = Grupo)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Ano",
+       y = "Contagem",
+       caption = "excluindo os valores para O80-O84") + 
+  scale_fill_discrete(name = "CID-10") +
+  theme_bw()
+
+```
+
+Interessante observar que, em 2021, houve uma significante redução no número de internações por complicações do trabalho de parto e do parto (O60-O75).
