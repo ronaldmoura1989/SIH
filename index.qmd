@@ -1,5 +1,5 @@
 ---
-title: "Analise dos dados do SIH-RD em Pernambuco de 2019 a 2023"
+title: "Analise dos dados do SIH-RD em Pernambuco de 2019 a 2024"
 author: "BioHub Solutions"
 date: 12/12/2023
 date-format: DD/MM/YYYY
@@ -46,8 +46,8 @@ Foram obtidos dados do SIH no estado de Pernambuco entre 2019 e 2023, para todos
 #| eval: false
 
 #extrair base de dados do SIH-RD
-sih_rd  = fetch_datasus(year_start = 2019,
-                         year_end = 2023,
+sih_rd  = fetch_datasus(year_start = 2023,
+                         year_end = 2024,
                          month_start = 1,
                          month_end = 12,
                          uf = "PE",
@@ -57,8 +57,8 @@ sih_rd = process_sih(sih_rd)
 names(sih_rd) = tolower(names(sih_rd))
 
 #extrair base de dados do CNES
-cnes  = fetch_datasus(year_start = 2019,
-                      year_end = 2023,
+cnes  = fetch_datasus(year_start = 2023,
+                      year_end = 2024,
                       month_start = 1,
                       month_end = 12,
                       uf = "PE",
@@ -70,13 +70,13 @@ cnes = cnes %>%
 cnes = process_cnes(cnes, information_system = "CNES-ST")
 
 cnes_reduzido = cnes %>%
-  select(CNES, FANTASIA, COD_CEP, CNPJ_MAN, munResNome:munResAlt) %>%
+  select(CNES, COD_CEP, CNPJ_MAN, munResNome:munResAlt) %>%
   rename(cnes = CNES)
 
-save(list = c("cnes", "cnes_reduzido"), file = "nao_upar/cnes.RData")
+#save(list = c("cnes", "cnes_reduzido"), file = "nao_upar/cnes.RData")
 
 #opcional: salvar o RData com o objeto.
-#save(sih_rd, file = "./SIH/sih_rd.RData")
+save(sih_rd, file = "./nao_upar/sih_rd.RData")
 ```
 
 ```{r, warning=FALSE, message=FALSE}

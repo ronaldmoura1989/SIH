@@ -34,7 +34,7 @@ Essa segmentação foi feita com base no [capítulo XV](https://cid.ninsaude.com
 ```{r, warning=FALSE, message=FALSE}
 #| echo: false
 
-Grupo = c("Ooo-Oo8", "O10-O16", "O20-O29", 
+Grupo = c("O00-O08", "O10-O16", "O20-O29", 
           "O30-O48", "O60-O75", "O80-O84", 
           "O85-O92", "O94-O99")
 
@@ -52,7 +52,7 @@ capitulo_xv = data.frame(Grupo, Descricao)
 ```{r, warning=FALSE, message=FALSE}
 
 gravidez = sih_rd %>%
-  mutate(cid_gravida = case_when(grepl("^O0[0:8]", diag_princ) == TRUE ~ "Ooo-Oo8",
+  mutate(cid_gravida = case_when(grepl("^O0[0:8]", diag_princ) == TRUE ~ "O00-O08",
                                  grepl("^O1[0:6]", diag_princ) == TRUE ~ "O10-O16",
                                  grepl("^O2[0:9]", diag_princ) == TRUE ~ "O20-O29",
                                  grepl("^O3[0:9]|^O4[0:8]", diag_princ) == TRUE ~ "O30-O48",
@@ -61,7 +61,7 @@ gravidez = sih_rd %>%
                                  grepl("^O8[5:9]|^O9[0:2]", diag_princ) == TRUE ~ "O85-O92",
                                  grepl("^O9[4:9]", diag_princ) == TRUE ~ "O94-O99")
   ) %>%
-  mutate(cid_gravida = fct_relevel(cid_gravida, c("Ooo-Oo8", "O10-O16", 
+  mutate(cid_gravida = fct_relevel(cid_gravida, c("O00-O08", "O10-O16", 
                                                   "O20-O29", "O30-O48", 
                                                   "O60-O75", "O80-O84",
                                                   "O85-O92", "O94-O99"))) %>%
@@ -70,10 +70,24 @@ gravidez = sih_rd %>%
          cnes, marca_uti, morte, cobranca, diag_princ,
          diagsec1:diagsec9, cid_gravida) %>%
   rename("cid" = diag_princ) %>%
-  left_join(., cid10::cid_subcat[c(1,5)]) %>%
+  left_join(., cid10::cid_subcat[c(1,5)], by = "cid") %>%
   relocate(descricao, .after = cid) %>%
+  unite(., cid_sec, diagsec1:diagsec9, sep = ";") %>%
+  mutate(descricao = ifelse(cid == "O00", "Gravidez ectópica", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O08", "Complicações conseqüentes a aborto e gravidez ectópica ou molar", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O10", "Hipertensão pré-existente complicando a gravidez, o parto e o puerpério", descricao)) %>%
   mutate(descricao = ifelse(cid == "O80", "Parto único espontâneo", descricao)) %>%
   mutate(descricao = ifelse(cid == "O84", "Parto múltiplo", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O20", "Hemorragia do início da gravidez", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O29", "Complicações de anestesia administrada durante a gravidez", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O30", "Gestação múltipla", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O69", "Trabalho de parto e parto complicados por anormalidade do cordão umbilical", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O70", "Laceração do períneo durante o parto", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O75", "Outras complicações do trabalho de parto e do parto não classificadas em outra parte", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O89", "Complicações da anestesia administrada durante o puerpério", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O90", "	Complicações do puerpério não classificadas em outra parte", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O92", "Outras afecções da mama e da lactação associadas ao parto", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O99", "Outras doenças da mãe, classificadas em outra parte, mas que complicam a gravidez o parto e o puerpério", descricao)) %>%
   left_join(., cnes_reduzido[,c(1:3)]) %>%
   relocate(FANTASIA, .after = cnes) %>%
   relocate(COD_CEP,  .after = FANTASIA)
@@ -98,6 +112,8 @@ tagList(datatable(capitulo_xv,
                   options = list(iDisplayLength = 25)
   ))
 ```
+
+## Códigos de O80 a O84
 
 Como esperado, a maior parte dos atendimentos foram para realização de parto. dentro dessa categoria temos registros para as seguintes causas:
 
@@ -161,3 +177,245 @@ capitulo_xv %>%
 ```
 
 Interessante observar que, em 2021, houve uma significante redução no número de internações por complicações do trabalho de parto e do parto (O60-O75).
+
+## Códigos de O00 a O08
+
+Os números para esse grupo de Gravidez que termina em aborto são os seguintes:
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez %>% 
+                    filter(cid_gravida == "O00-O08") %>%
+                    group_by(cid, descricao, morte) %>%
+                    summarise(contagem = n()) %>%
+                    pivot_wider(., 
+                                names_from = morte,
+                                values_from = contagem) %>%
+                    rename(viva = Não) %>%
+                    rename(obito = Sim) %>%
+                    mutate(obito = ifelse(is.na(obito) == TRUE, 0, obito)) %>%
+                    mutate(total = viva+obito) %>%
+                    arrange(desc(total)),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+
+```
+
+Três mulheres faleceram, com idades de 30, 31 e 34 anos. Nenhuma necessitou de cuidados de UTI.
+
+## Códigos de O10 até O16
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez %>% 
+                    filter(cid_gravida == "O10-O16") %>%
+                    group_by(cid, descricao, morte) %>%
+                    summarise(contagem = n()) %>%
+                    pivot_wider(., 
+                                names_from = morte,
+                                values_from = contagem) %>%
+                    rename(viva = Não) %>%
+                    rename(obito = Sim) %>%
+                    mutate(obito = ifelse(is.na(obito) == TRUE, 0, obito)) %>%
+                    mutate(total = viva+obito) %>%
+                    arrange(desc(total)),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+```
+
+## Códigos de O20 até O29
+
+```{r, warning=FALSE, message=FALSE}
+
+
+tagList(datatable(gravidez %>% 
+                    filter(cid_gravida == "O20-O29") %>%
+                    group_by(cid, descricao, morte) %>%
+                    summarise(contagem = n()) %>%
+                    pivot_wider(., 
+                                names_from = morte,
+                                values_from = contagem) %>%
+                    rename(viva = Não) %>%
+                    mutate(obito = 0) %>%
+                    mutate(obito = ifelse(is.na(obito) == TRUE, 0, obito)) %>%
+                    mutate(total = viva+obito) %>%
+                    arrange(desc(total)),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+
+```
+
+## Códigos de O30 até O48
+
+```{r, warning=FALSE, message=FALSE}
+
+
+tagList(datatable(gravidez %>% 
+                    filter(cid_gravida == "O30-O48") %>%
+                    group_by(cid, descricao, morte) %>%
+                    summarise(contagem = n()) %>%
+                    pivot_wider(., 
+                                names_from = morte,
+                                values_from = contagem) %>%
+                    rename(viva  = Não) %>%
+                    rename(obito = Sim) %>%
+                    mutate(obito = ifelse(is.na(obito) == TRUE, 0, obito)) %>%
+                    mutate(total = viva+obito) %>%
+                    arrange(desc(total)),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+```
+
+## Códigos de O60 até O75
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez %>% 
+                    filter(cid_gravida == "O60-O75") %>%
+                    group_by(cid, descricao, morte) %>%
+                    summarise(contagem = n()) %>%
+                    pivot_wider(., 
+                                names_from = morte,
+                                values_from = contagem) %>%
+                    rename(viva  = Não) %>%
+                    rename(obito = Sim) %>%
+                    mutate(obito = ifelse(is.na(obito) == TRUE, 0, obito)) %>%
+                    mutate(total = viva+obito) %>%
+                    arrange(desc(total)),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+
+```
+
+## Códigos de O85 até O92
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez %>% 
+                    filter(cid_gravida == "O85-O92") %>%
+                    group_by(cid, descricao, morte) %>%
+                    summarise(contagem = n()) %>%
+                    pivot_wider(., 
+                                names_from = morte,
+                                values_from = contagem) %>%
+                    rename(viva  = Não) %>%
+                    rename(obito = Sim) %>%
+                    mutate(obito = ifelse(is.na(obito) == TRUE, 0, obito)) %>%
+                    mutate(total = viva+obito) %>%
+                    arrange(desc(total)),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+
+```
+
+## Códigos de O94 até O99
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez %>% 
+                    filter(cid_gravida == "O94-O99") %>%
+                    group_by(cid, descricao, morte) %>%
+                    summarise(contagem = n()) %>%
+                    pivot_wider(., 
+                                names_from = morte,
+                                values_from = contagem) %>%
+                    rename(viva  = Não) %>%
+                    rename(obito = Sim) %>%
+                    mutate(obito = ifelse(is.na(obito) == TRUE, 0, obito)) %>%
+                    mutate(total = viva+obito) %>%
+                    arrange(desc(total)),
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+
+```
+
+## Investigando as causas secundárias entre as grávidas
+
+```{r, warning=FALSE, message=FALSE}
+
+x = unlist(strsplit(gravidez$cid_sec, split = ";"))
+x = subset(x, x != "NA")
+
+y = data.frame(table(x))
+colnames(y) = c("cid", "contagem")
+
+gravidez_secundaria = y %>%
+  mutate(cid_gravida = case_when(grepl("^O0[0:8]", cid) == TRUE ~ "O00-O08",
+                                 grepl("^O1[0:6]", cid) == TRUE ~ "O10-O16",
+                                 grepl("^O2[0:9]", cid) == TRUE ~ "O20-O29",
+                                 grepl("^O3[0:9]|^O4[0:8]", cid) == TRUE ~ "O30-O48",
+                                 grepl("^O6[0:9]|^O7[0:5]", cid) == TRUE ~ "O60-O75",
+                                 grepl("^O8[0:4]", cid) == TRUE ~ "O80-O84",
+                                 grepl("^O8[5:9]|^O9[0:2]", cid) == TRUE ~ "O85-O92",
+                                 grepl("^O9[4:9]", cid) == TRUE ~ "O94-O99")
+  ) %>%
+  left_join(., cid10::cid_subcat[c(1,5)], by = "cid") %>%
+  relocate(descricao, .after = cid) %>%
+  mutate(descricao = ifelse(cid == "O00", "Gravidez ectópica", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O08", "Complicações conseqüentes a aborto e gravidez ectópica ou molar", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O10", "Hipertensão pré-existente complicando a gravidez, o parto e o puerpério", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O80", "Parto único espontâneo", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O84", "Parto múltiplo", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O20", "Hemorragia do início da gravidez", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O29", "Complicações de anestesia administrada durante a gravidez", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O30", "Gestação múltipla", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O69", "Trabalho de parto e parto complicados por anormalidade do cordão umbilical", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O70", "Laceração do períneo durante o parto", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O75", "Outras complicações do trabalho de parto e do parto não classificadas em outra parte", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O89", "Complicações da anestesia administrada durante o puerpério", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O90", "	Complicações do puerpério não classificadas em outra parte", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O92", "Outras afecções da mama e da lactação associadas ao parto", descricao)) %>%
+  mutate(descricao = ifelse(cid == "O99", "Outras doenças da mãe, classificadas em outra parte, mas que complicam a gravidez o parto e o puerpério", descricao))
+
+rm(x, y)
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez_secundaria,
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+```
+
+## Pré-eclampsia
+
+```{r, warning=FALSE, message=FALSE}
+
+tagList(datatable(gravidez %>%
+  filter(grepl("O14", cid_sec) == TRUE) %>%
+  group_by(ano_cmpt, cobranca) %>%
+  summarise(n = n()) %>%
+  pivot_wider(., names_from = ano_cmpt, values_from = n)
+  
+  ,
+                  autoHideNavigation = TRUE,
+                  options = list(iDisplayLength = 25)
+  ))
+```
+
+## Inferencias
+
+```{r}
+
+gravidez %>%
+  filter(grepl("O80-O84", cid_gravida) == TRUE) %>%
+  group_by(cid, descricao, cobranca) %>%
+  summarise(n = n()) %>%
+  pivot_wider(., names_from = cobranca, values_from = n) %>%
+  rowwise() %>%
+  mutate(total    = sum(c_across(1:21), na.rm = TRUE)) %>%
+  mutate(rn_obito = sum(c_across(c(3,6,21)), na.rm = TRUE)) %>%
+  mutate(rn_vivo  = total - rn_obito) %>%
+  mutate(letalidade_pct = (rn_obito / total)*100) %>%
+  select(1,2,24,25,26,27)
+
+```
